@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pengingat — sistem alert pribadi</title>
+<style>
+  :root{
+    --ink:#1c1d1b;
+    --paper:#faf8f3;
+    --line:#e3ddd0;
+    --line-strong:#cfc6b3;
+    --accent:#9a6b3f;
+    --accent-soft:#f1e6d8;
+    --muted:#8a8478;
+    --done:#7c8f6e;
+    --done-soft:#eaeee2;
+    --mono: "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+    --serif: "Iowan Old Style", "Georgia", serif;
+    --sans: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:var(--sans);
+    background:var(--paper);
+    color:var(--ink);
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{
+    max-width:760px;
+    margin:0 auto;
+    padding:40px 24px 100px;
+  }
+  header{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    border-bottom:2px solid var(--ink);
+    padding-bottom:14px;
+    margin-bottom:8px;
+  }
+  header h1{
+    font-family:var(--serif);
+    font-size:28px;
+    font-weight:600;
+    margin:0;
+    letter-spacing:0.3px;
+  }
+  header .date{
+    font-family:var(--mono);
+    font-size:12px;
+    color:var(--muted);
+    text-transform:uppercase;
+    letter-spacing:1px;
+  }
+  .sub{
+    font-size:13px;
+    color:var(--muted);
+    margin:10px 0 28px;
+  }
+  .sub a{color:var(--accent);text-decoration:none;border-bottom:1px solid currentColor;}
+
+  /* Setup box */
+  .setup{
+    border:1px solid var(--line-strong);
+    border-radius:2px;
+    background:#fff;
+    padding:18px 20px;
+    margin-bottom:32px;
+  }
+  .setup summary{
+    font-family:var(--mono);
+    font-size:12px;
+    text-transform:uppercase;
+    letter-spacing:1.5px;
+    color:var(--accent);
+    cursor:pointer;
+    list-style:none;
+  }
+  .setup summary::-webkit-details-marker{display:none;}
+  .setup summary::before{content:"▸ ";}
+  .setup[open] summary::before{content:"▾ ";}
+  .setup-body{margin-top:16px;}
+  .field-row{
+    display:grid;
+    grid-template-columns:140px 1fr;
+    gap:10px;
+    align-items:center;
+    margin-bottom:10px;
+  }
+  .field-row label{
+    font-size:12px;
+    font-family:var(--mono);
+    color:var(--muted);
+  }
+  .setup-note{
+    font-size:12px;
+    color:var(--muted);
+    margin-top:12px;
+    padding-top:12px;
+    border-top:1px dashed var(--line);
+  }
+
+  /* Form */
+  .form-card{
+    border:1px solid var(--ink);
+    border-radius:2px;
+    padding:22px 24px;
+    margin-bottom:36px;
+    background:#fff;
+  }
+  .form-card h2{
+    font-family:var(--serif);
+    font-size:16px;
+    margin:0 0 16px;
+    font-weight:600;
+  }
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .field{margin-bottom:12px;}
+  .field label{
+    display:block;
+    font-size:11px;
+    font-family:var(--mono);
+    text-transform:uppercase;
+    letter-spacing:1px;
+    color:var(--muted);
+    margin-bottom:5px;
+  }
+  input, textarea, select{
+    width:100%;
+    font-family:var(--sans);
+    font-size:14px;
+    padding:9px 10px;
+    border:1px solid var(--line-strong);
+    border-radius:2px;
+    background:var(--paper);
+    color:var(--ink);
+  }
+  input:focus, textarea:focus, select:focus{
+    outline:2px solid var(--accent);
+    outline-offset:1px;
+    background:#fff;
+  }
+  textarea{resize:vertical;min-height:60px;}
+
+  .actions{display:flex;gap:10px;margin-top:14px;}
+  button{
+    font-family:var(--mono);
+    font-size:12px;
+    text-transform:uppercase;
+    letter-spacing:1px;
+    padding:10px 18px;
+    border:1px solid var(--ink);
+    border-radius:2px;
+    background:var(--ink);
+    color:var(--paper);
+    cursor:pointer;
+    transition:opacity .15s;
+  }
+  button.secondary{
+    background:transparent;
+    color:var(--ink);
+  }
+  button:hover{opacity:.78;}
+  button:active{transform:translateY(1px);}
+
+  /* List */
+  .list-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    margin-bottom:14px;
+  }
+  .list-head h2{
+    font-family:var(--serif);
+    font-size:18px;
+    margin:0;
+    font-weight:600;
+  }
+  .count{font-family:var(--mono);font-size:12px;color:var(--muted);}
+
+  .note{
+    border:1px solid var(--line);
+    border-left:3px solid var(--accent);
+    border-radius:2px;
+    background:#fff;
+    padding:14px 16px;
+    margin-bottom:10px;
+    display:grid;
+    grid-template-columns:1fr auto;
+    gap:8px 16px;
+    align-items:start;
+  }
+  .note.done{
+    border-left-color:var(--done);
+    opacity:.6;
+  }
+  .note.done .note-title{text-decoration:line-through;}
+  .note-time{
+    font-family:var(--mono);
+    font-size:11px;
+    color:var(--accent);
+    letter-spacing:.5px;
+    text-transform:uppercase;
+    margin-bottom:4px;
+  }
+  .note-title{
+    font-size:15px;
+    font-weight:600;
+    margin:0 0 4px;
+  }
+  .note-desc{
+    font-size:13px;
+    color:var(--muted);
+    margin:0;
+    white-space:pre-wrap;
+  }
+  .note-actions{
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    align-items:flex-end;
+  }
+  .note-actions button{
+    padding:6px 10px;
+    font-size:10px;
+  }
+  .empty{
+    text-align:center;
+    padding:50px 20px;
+    color:var(--muted);
+    font-size:13px;
+    border:1px dashed var(--line-strong);
+    border-radius:2px;
+  }
+  .empty .big{
+    font-family:var(--serif);
+    font-size:20px;
+    color:var(--ink);
+    display:block;
+    margin-bottom:6px;
+  }
+
+  /* Cron instruction card */
+  .cron-card{
+    border:1px solid var(--line-strong);
+    border-radius:2px;
+    padding:12px 16px;
+    margin-top:8px;
+    background:var(--accent-soft);
+    font-size:12px;
+  }
+  .cron-card .label{
+    font-family:var(--mono);
+    text-transform:uppercase;
+    letter-spacing:1px;
+    color:var(--accent);
+    font-size:10px;
+    margin-bottom:6px;
+    display:block;
+  }
+  .url-box{
+    display:flex;
+    gap:8px;
+    align-items:center;
+  }
+  .url-box code{
+    flex:1;
+    display:block;
+    font-family:var(--mono);
+    font-size:11px;
+    padding:8px;
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:2px;
+    overflow-x:auto;
+    white-space:nowrap;
+    color:var(--ink);
+  }
+  .url-box button{padding:8px 12px;font-size:10px;flex-shrink:0;}
+  .schedule-hint{
+    margin-top:8px;
+    color:var(--muted);
+    font-family:var(--mono);
+    font-size:11px;
+  }
+  .toast{
+    position:fixed;
+    bottom:24px;
+    left:50%;
+    transform:translateX(-50%);
+    background:var(--ink);
+    color:var(--paper);
+    padding:10px 20px;
+    border-radius:2px;
+    font-family:var(--mono);
+    font-size:12px;
+    letter-spacing:.5px;
+    opacity:0;
+    transition:opacity .2s, transform .2s;
+    pointer-events:none;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(-6px);}
+
+  @media (max-width:540px){
+    .grid2{grid-template-columns:1fr;}
+    .field-row{grid-template-columns:1fr;}
+    .note{grid-template-columns:1fr;}
+    .note-actions{flex-direction:row;align-items:center;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>Pengingat</h1>
+    <span class="date" id="today-date"></span>
+  </header>
+  <p class="sub">Catat kegiatan, dapatkan reminder otomatis ke Telegram lewat <a href="https://cron-job.org" target="_blank" rel="noopener">cron-job.org</a>. Lihat panduan di bawah.</p>
+
+  <details class="setup">
+    <summary>Pengaturan Telegram &amp; panduan singkat</summary>
+    <div class="setup-body">
+      <div class="field-row">
+        <label for="tg-token">Bot Token</label>
+        <input id="tg-token" type="text" placeholder="123456789:ABC-defGhIjklmNoPQRsTUVwxyZ">
+      </div>
+      <div class="field-row">
+        <label for="tg-chat">Chat ID</label>
+        <input id="tg-chat" type="text" placeholder="987654321">
+      </div>
+      <button class="secondary" id="save-tg">Simpan</button>
+
+      <div class="setup-note">
+        <strong>Cara dapat token &amp; chat id:</strong><br>
+        1. Di Telegram, chat ke <strong>@BotFather</strong> → kirim <code>/newbot</code> → ikuti instruksi → dapat <em>token</em>.<br>
+        2. Cari bot kamu sendiri → tekan <strong>Start</strong> (kirim pesan apa saja).<br>
+        3. Buka di browser: <code>https://api.telegram.org/bot&lt;TOKEN&gt;/getUpdates</code> → cari angka setelah <code>"chat":{"id":</code> — itu chat id kamu.<br><br>
+        <strong>Cara pakai per-note:</strong> tiap note akan menghasilkan satu URL siap-pakai. Salin URL itu ke <strong>cron-job.org</strong> (gratis, daftar dengan email), buat job baru, atur jadwal sesuai tanggal &amp; jam note, tempel URL, simpan. Saat waktunya tiba, cron-job.org akan memanggil URL itu dan Telegram bot otomatis kirim pesan ke kamu — tanpa perlu tab ini terbuka.
+      </div>
+    </div>
+  </details>
+
+  <div class="form-card">
+    <h2>Tambah catatan baru</h2>
+    <div class="grid2">
+      <div class="field">
+        <label for="f-date">Tanggal</label>
+        <input id="f-date" type="date">
+      </div>
+      <div class="field">
+        <label for="f-time">Jam</label>
+        <input id="f-time" type="time">
+      </div>
+    </div>
+    <div class="field">
+      <label for="f-title">Judul kegiatan</label>
+      <input id="f-title" type="text" placeholder="Misal: Meeting tim, deadline laporan, dst.">
+    </div>
+    <div class="field">
+      <label for="f-desc">Detail / catatan</label>
+      <textarea id="f-desc" placeholder="Detail tambahan tentang kegiatan ini..."></textarea>
+    </div>
+    <div class="actions">
+      <button id="add-note">Simpan catatan</button>
+      <button class="secondary" id="clear-form">Bersihkan</button>
+    </div>
+  </div>
+
+  <div class="list-head">
+    <h2>Daftar catatan</h2>
+    <span class="count" id="note-count">0 catatan</span>
+  </div>
+
+  <div id="note-list"></div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const STORAGE_KEY = 'reminder_notes_v1';
+const TG_KEY = 'reminder_tg_config_v1';
+
+function load(){ try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; } catch { return []; } }
+function save(notes){ localStorage.setItem(STORAGE_KEY, JSON.stringify(notes)); }
+function loadTg(){ try { return JSON.parse(localStorage.getItem(TG_KEY)) || {}; } catch { return {}; } }
+function saveTg(cfg){ localStorage.setItem(TG_KEY, JSON.stringify(cfg)); }
+
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=> t.classList.remove('show'), 1800);
+}
+
+// Header date
+document.getElementById('today-date').textContent = new Date().toLocaleDateString('id-ID', {
+  weekday:'long', day:'numeric', month:'long', year:'numeric'
+});
+
+// Telegram config
+const tgCfg = loadTg();
+if(tgCfg.token) document.getElementById('tg-token').value = tgCfg.token;
+if(tgCfg.chat) document.getElementById('tg-chat').value = tgCfg.chat;
+
+document.getElementById('save-tg').addEventListener('click', ()=>{
+  const token = document.getElementById('tg-token').value.trim();
+  const chat = document.getElementById('tg-chat').value.trim();
+  saveTg({token, chat});
+  showToast('Pengaturan tersimpan');
+  render();
+});
+
+// Add note
+document.getElementById('add-note').addEventListener('click', ()=>{
+  const date = document.getElementById('f-date').value;
+  const time = document.getElementById('f-time').value;
+  const title = document.getElementById('f-title').value.trim();
+  const desc = document.getElementById('f-desc').value.trim();
+
+  if(!date || !time || !title){
+    showToast('Isi tanggal, jam, dan judul dulu');
+    return;
+  }
+
+  const notes = load();
+  notes.push({
+    id: Date.now().toString(36),
+    date, time, title, desc,
+    done: false
+  });
+  save(notes);
+  clearForm();
+  render();
+  showToast('Catatan ditambahkan');
+});
+
+function clearForm(){
+  document.getElementById('f-date').value = '';
+  document.getElementById('f-time').value = '';
+  document.getElementById('f-title').value = '';
+  document.getElementById('f-desc').value = '';
+}
+document.getElementById('clear-form').addEventListener('click', clearForm);
+
+function deleteNote(id){
+  save(load().filter(n => n.id !== id));
+  render();
+  showToast('Catatan dihapus');
+}
+
+function toggleDone(id){
+  const notes = load();
+  const n = notes.find(x => x.id === id);
+  if(n) n.done = !n.done;
+  save(notes);
+  render();
+}
+
+function buildTelegramUrl(note){
+  const cfg = loadTg();
+  if(!cfg.token || !cfg.chat) return null;
+  const dateLabel = new Date(note.date + 'T00:00:00').toLocaleDateString('id-ID', {
+    weekday:'long', day:'numeric', month:'long', year:'numeric'
+  });
+  let text = `Pengingat\n${note.title}\n${dateLabel}, pukul ${note.time}`;
+  if(note.desc) text += `\n\n${note.desc}`;
+  const encoded = encodeURIComponent(text);
+  return `https://api.telegram.org/bot${cfg.token}/sendMessage?chat_id=${cfg.chat}&text=${encoded}`;
+}
+
+function copyUrl(url, btn){
+  navigator.clipboard.writeText(url).then(()=>{
+    showToast('URL disalin — tempel ke cron-job.org');
+  }).catch(()=>{
+    showToast('Gagal menyalin, salin manual');
+  });
+}
+
+function render(){
+  const notes = load().sort((a,b) => (a.date+a.time).localeCompare(b.date+b.time));
+  const list = document.getElementById('note-list');
+  const cfg = loadTg();
+  document.getElementById('note-count').textContent =
+    notes.length === 0 ? '0 catatan' : `${notes.length} catatan`;
+
+  if(notes.length === 0){
+    list.innerHTML = `<div class="empty"><span class="big">Belum ada catatan</span>Tambahkan kegiatan pertamamu di atas.</div>`;
+    return;
+  }
+
+  list.innerHTML = notes.map(n => {
+    const dateLabel = new Date(n.date + 'T00:00:00').toLocaleDateString('id-ID', {
+      day:'numeric', month:'short', year:'numeric'
+    });
+    const url = buildTelegramUrl(n);
+    let cronBlock = '';
+    if(url){
+      cronBlock = `
+        <div class="cron-card">
+          <span class="label">URL untuk cron-job.org</span>
+          <div class="url-box">
+            <code>${url}</code>
+            <button onclick="copyUrl('${url.replace(/'/g, "\\'")}')">Salin</button>
+          </div>
+          <div class="schedule-hint">Jadwalkan job berjalan tepat: ${dateLabel}, ${n.time} (sekali saja)</div>
+        </div>`;
+    } else {
+      cronBlock = `<div class="cron-card"><span class="label">Telegram belum diatur</span>Isi bot token &amp; chat id di pengaturan di atas untuk membuat URL reminder.</div>`;
+    }
+
+    return `
+      <div class="note ${n.done ? 'done' : ''}">
+        <div>
+          <div class="note-time">${dateLabel} · ${n.time}</div>
+          <div class="note-title">${escapeHtml(n.title)}</div>
+          ${n.desc ? `<p class="note-desc">${escapeHtml(n.desc)}</p>` : ''}
+          ${cronBlock}
+        </div>
+        <div class="note-actions">
+          <button class="secondary" onclick="toggleDone('${n.id}')">${n.done ? 'Batal selesai' : 'Selesai'}</button>
+          <button class="secondary" onclick="deleteNote('${n.id}')">Hapus</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function escapeHtml(str){
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+render();
+</script>
+</body>
+</html>
